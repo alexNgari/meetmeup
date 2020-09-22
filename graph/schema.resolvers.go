@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"errors"
 
 	"github.com/alexNgari/meetmeup/graph/generated"
 	"github.com/alexNgari/meetmeup/graph/model"
@@ -15,12 +14,7 @@ import (
 )
 
 func (r *meetupResolver) User(ctx context.Context, obj *models.Meetup) (*models.User, error) {
-	for _, user := range r.users {
-		if user.ID == obj.UserID {
-			return user, nil
-		}
-	}
-	return nil, errors.New("User does not exist")
+	return r.UsersRepo.GetUserByID(obj.UserID)
 }
 
 func (r *mutationResolver) CreateMeetup(ctx context.Context, input model.NewMeetup) (*models.Meetup, error) {
@@ -28,10 +22,8 @@ func (r *mutationResolver) CreateMeetup(ctx context.Context, input model.NewMeet
 		UserID:      input.UserID,
 		Name:        input.Name,
 		Description: input.Description,
-		ID:          fmt.Sprintf("M%d", rand.Int()),
 	}
-	r.meetups = append(r.meetups, meetup)
-	return meetup, nil
+	return r.MeetupsRepo.CreateMeetup(meetup)
 }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*models.User, error) {
@@ -46,7 +38,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 }
 
 func (r *queryResolver) Meetups(ctx context.Context) ([]*models.Meetup, error) {
-	return r.meetups, nil
+	return r.MeetupsRepo.GetMeetups()
 }
 
 func (r *userResolver) Meetups(ctx context.Context, obj *models.User) ([]*models.Meetup, error) {

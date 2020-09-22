@@ -8,6 +8,7 @@ package graph
 
 import (
 	"github.com/alexNgari/meetmeup/graph/models"
+	"github.com/alexNgari/meetmeup/postgres"
 )
 
 type Resolver struct{
@@ -36,4 +37,6 @@ type Resolver struct{
 	// 	Username: "Jon",
 	// 	Email: "jon@gmail.com"
 	// }
+	MeetupsRepo postgres.MeetupsRepo
+	UsersRepo postgres.UsersRepo
 }
