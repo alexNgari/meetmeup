@@ -11,6 +11,10 @@ import (
 	"github.com/alexNgari/meetmeup/graph"
 	"github.com/alexNgari/meetmeup/graph/generated"
 	"github.com/alexNgari/meetmeup/postgres"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/rs/cors"
+	customMiddleware "github.com/alexNgari/meetmeup/middleware"
 )
 
 const defaultPort = "8080"
@@ -32,9 +36,23 @@ func main() {
 		port = defaultPort
 	}
 
+	userRepo := postgres.UsersRepo{DB: DB},
+
+	router := chi.NewRouter()
+
+	router.Use(cors.New(cors.Options{
+		Debug: true,
+		AllowCredentials: true,
+		AllowedOrigins: []string{"http://localhost:8080"}
+	}).Handler)
+
+	router.Use(middleware.RequestID)
+	router.Use(middleware.Logger)
+	router.Use(customMiddleware.AuthMiddleware(userRepo))
+
 	c := generated.Config{Resolvers: &graph.Resolver{
 				MeetupsRepo: postgres.MeetupsRepo{DB: DB},
-				UsersRepo: postgres.UsersRepo{DB: DB},
+				UsersRepo: userRepo
 			}}
 
 	queryHandler := handler.NewDefaultServer(generated.NewExecutableSchema(c))
