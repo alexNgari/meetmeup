@@ -7,9 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/alexNgari/meetmeup/graph/generated"
-	"github.com/alexNgari/meetmeup/graph/model"
 	"github.com/alexNgari/meetmeup/graph/models"
 )
 
@@ -17,7 +17,7 @@ func (r *meetupResolver) User(ctx context.Context, obj *models.Meetup) (*models.
 	return getUserLoader(ctx).Load(obj.UserID)
 }
 
-func (r *mutationResolver) CreateMeetup(ctx context.Context, input model.NewMeetup) (*models.Meetup, error) {
+func (r *mutationResolver) CreateMeetup(ctx context.Context, input models.NewMeetup) (*models.Meetup, error) {
 	// meetup := &models.Meetup{
 	// 	UserID:      input.UserID,
 	// 	Name:        input.Name,
@@ -27,7 +27,7 @@ func (r *mutationResolver) CreateMeetup(ctx context.Context, input model.NewMeet
 	return nil, nil
 }
 
-func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*models.User, error) {
+func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser) (*models.User, error) {
 	// user := &models.User{
 	// 	ID:       fmt.Sprintf("U%d", rand.Int()),
 	// 	Username: input.Username,
@@ -39,7 +39,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	return nil, nil
 }
 
-func (r *mutationResolver) UpdateMeetup(ctx context.Context, id string, input model.UpdateMeetup) (*models.Meetup, error) {
+func (r *mutationResolver) UpdateMeetup(ctx context.Context, id string, input models.UpdateMeetup) (*models.Meetup, error) {
 	meetup, err := r.MeetupsRepo.GetMeetupByID(id)
 	if err != nil || meetup == nil {
 		return nil, errors.New("Meetup does not exist")
@@ -79,7 +79,62 @@ func (r *mutationResolver) DeleteMeetup(ctx context.Context, id string) (bool, e
 	return true, nil
 }
 
-func (r *queryResolver) Meetups(ctx context.Context, filter *model.MeetupFilter, limit *int, offset *int) ([]*models.Meetup, error) {
+func (r *mutationResolver) Register(ctx context.Context, input models.RegisterInput) (*models.AuthResponse, error) {
+	_, err := r.UsersRepo.GetUserByEmail(input.Email)
+	if err == nil {
+		return nil, errors.New("email already in use")
+	}
+
+	_, err = r.UsersRepo.GetUserByUsername(input.Username)
+	if err == nil {
+		return nil, errors.New("username already in use")
+	}
+
+	user := &models.User{
+		Username:  input.Username,
+		Email:     input.Email,
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+	}
+
+	err = user.HashPassword(input.Password)
+	if err != nil {
+		log.Printf("error while hashing password: %v", err)
+		return nil, err
+	}
+
+	// @TODO: create verifivation code
+
+	tx, err := r.UsersRepo.DB.Begin()
+	if err != nil {
+		log.Printf("error creating a transaction: %v", err)
+		return nil, errors.New("Something went wrong")
+	}
+	defer tx.Rollback()
+
+	if _, err := r.UsersRepo.CreateUser(tx, user); err != nil {
+		log.Printf("error creating user: %v", err)
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("error while committing: %v", err)
+		return nil, err
+	}
+
+	token, err := user.GenToken()
+	if err != nil {
+		log.Printf("error while generating token: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	return &models.AuthResponse{
+		AuthToken: token,
+		User:      user,
+	}, nil
+}
+
+func (r *queryResolver) Meetups(ctx context.Context, filter *models.MeetupFilter, limit *int, offset *int) ([]*models.Meetup, error) {
 	return r.MeetupsRepo.GetMeetups(filter, limit, offset)
 }
 

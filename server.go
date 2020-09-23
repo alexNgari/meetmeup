@@ -36,14 +36,14 @@ func main() {
 		port = defaultPort
 	}
 
-	userRepo := postgres.UsersRepo{DB: DB},
+	userRepo := postgres.UsersRepo{DB: DB}
 
 	router := chi.NewRouter()
 
 	router.Use(cors.New(cors.Options{
 		Debug: true,
 		AllowCredentials: true,
-		AllowedOrigins: []string{"http://localhost:8080"}
+		AllowedOrigins: []string{"http://localhost:8080"},
 	}).Handler)
 
 	router.Use(middleware.RequestID)
@@ -52,7 +52,7 @@ func main() {
 
 	c := generated.Config{Resolvers: &graph.Resolver{
 				MeetupsRepo: postgres.MeetupsRepo{DB: DB},
-				UsersRepo: userRepo
+				UsersRepo: userRepo,
 			}}
 
 	queryHandler := handler.NewDefaultServer(generated.NewExecutableSchema(c))

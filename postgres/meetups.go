@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"github.com/go-pg/pg/v10"
 	"github.com/alexNgari/meetmeup/graph/models"
-	"github.com/alexNgari/meetmeup/graph/model"
 	)
 
 type MeetupsRepo struct {
 	DB *pg.DB
 }
 
-func (m *MeetupsRepo) GetMeetups(filter *model.MeetupFilter, limit, offsest *int) ([]*models.Meetup, error) {
+func (m *MeetupsRepo) GetMeetups(filter *models.MeetupFilter, limit, offsest *int) ([]*models.Meetup, error) {
 	var meetups []*models.Meetup
 
 	query := m.DB.Model(&meetups).Order("id")
