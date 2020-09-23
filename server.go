@@ -32,13 +32,15 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
-		MeetupsRepo: postgres.MeetupsRepo{DB: DB},
-		UsersRepo: postgres.UsersRepo{DB: DB},
-	}}))
+	c := generated.Config{Resolvers: &graph.Resolver{
+				MeetupsRepo: postgres.MeetupsRepo{DB: DB},
+				UsersRepo: postgres.UsersRepo{DB: DB},
+			}}
+
+	queryHandler := handler.NewDefaultServer(generated.NewExecutableSchema(c))
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	http.Handle("/query", graph.DataloaderMiddleware(DB, queryHandler))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))

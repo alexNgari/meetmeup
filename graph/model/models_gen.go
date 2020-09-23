@@ -2,6 +2,10 @@
 
 package model
 
+type MeetupFilter struct {
+	Name *string `json:"name"`
+}
+
 type NewMeetup struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -11,4 +15,9 @@ type NewMeetup struct {
 type NewUser struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
+}
+
+type UpdateMeetup struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
 }

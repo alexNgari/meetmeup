@@ -17,3 +17,9 @@ func (u *UsersRepo) GetUserByID(id string) (*models.User, error) {
 	}
 	return user, nil
 }
+
+func (u *UsersRepo) GetMeetupsForUser(user *models.User) ([]*models.Meetup, error) {
+	var meetups []*models.Meetup
+	err := u.DB.Model(&meetups).Where("user_id = ?", user.ID).Order("id").Select()
+	return meetups, err
+}
