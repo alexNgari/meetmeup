@@ -11,6 +11,7 @@ import (
 
 	"github.com/alexNgari/meetmeup/graph/generated"
 	"github.com/alexNgari/meetmeup/graph/models"
+	customMiddleware "github.com/alexNgari/meetmeup/middleware"
 )
 
 func (r *meetupResolver) User(ctx context.Context, obj *models.Meetup) (*models.User, error) {
@@ -18,13 +19,17 @@ func (r *meetupResolver) User(ctx context.Context, obj *models.Meetup) (*models.
 }
 
 func (r *mutationResolver) CreateMeetup(ctx context.Context, input models.NewMeetup) (*models.Meetup, error) {
-	// meetup := &models.Meetup{
-	// 	UserID:      input.UserID,
-	// 	Name:        input.Name,
-	// 	Description: input.Description,
-	// }
-	// return r.MeetupsRepo.CreateMeetup(meetup)
-	return nil, nil
+	currentUser, err := customMiddleware.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, ErrUnauthenticated
+	}
+
+	meetup := &models.Meetup{
+		UserID:      currentUser.ID,
+		Name:        input.Name,
+		Description: input.Description,
+	}
+	return r.MeetupsRepo.CreateMeetup(meetup)
 }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser) (*models.User, error) {
@@ -134,6 +139,28 @@ func (r *mutationResolver) Register(ctx context.Context, input models.RegisterIn
 	}, nil
 }
 
+func (r *mutationResolver) Login(ctx context.Context, input models.LoginInput) (*models.AuthResponse, error) {
+	user, err := r.UsersRepo.GetUserByEmail(input.Email)
+	if err != nil {
+		return nil, ErrBadCredentials
+	}
+
+	err = user.ComparePassword(input.Password)
+	if err != nil {
+		return nil, ErrBadCredentials
+	}
+
+	token, err := user.GenToken()
+	if err != nil {
+		return nil, errors.New("something went wrong")
+	}
+
+	return &models.AuthResponse{
+		AuthToken: token,
+		User:      user,
+	}, nil
+}
+
 func (r *queryResolver) Meetups(ctx context.Context, filter *models.MeetupFilter, limit *int, offset *int) ([]*models.Meetup, error) {
 	return r.MeetupsRepo.GetMeetups(filter, limit, offset)
 }
@@ -162,3 +189,14 @@ type meetupResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+var (
+	ErrBadCredentials  = errors.New("email/password combination do not match")
+	ErrUnauthenticated = errors.New("not authorized to view this content")
+)
